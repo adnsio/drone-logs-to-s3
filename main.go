@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"database/sql"
+	"flag"
 	"fmt"
+	"math"
 	"os"
 	"time"
 
@@ -26,6 +28,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	fromIDFlag := flag.Int64("from-id", 0, "")
+	toIDFlag := flag.Int64("to-id", math.MaxInt64, "")
+
+	flag.Parse()
+
+	fromID := *fromIDFlag
+	toID := *toIDFlag
+
 	db, err := sql.Open("mysql", droneDatabaseDatasource)
 	if err != nil {
 		panic(err)
@@ -47,7 +57,7 @@ func main() {
 
 	awsS3Uploader := s3manager.NewUploader(awsSession)
 
-	rows, err := db.Query("select log_id, log_data from logs")
+	rows, err := db.Query(fmt.Sprintf("select log_id, log_data from logs where log_id >= %d and log_id <= %d", fromID, toID))
 	if err != nil {
 		panic(err)
 	}
@@ -60,8 +70,6 @@ func main() {
 			panic(err)
 		}
 
-		fmt.Printf("%d\n", logID)
-
 		if _, err = awsS3Uploader.Upload(&s3manager.UploadInput{
 			Bucket: aws.String(droneS3BucketEnv),
 			Key:    aws.String(fmt.Sprint(logID)),
@@ -69,5 +77,7 @@ func main() {
 		}); err != nil {
 			panic(err)
 		}
+
+		fmt.Printf("%d\n", logID)
 	}
 }
