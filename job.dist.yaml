@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: drone-logs-to-s3
+  namespace: drone
+spec:
+  template:
+    spec:
+      containers:
+        - name: drone-logs-to-s3
+          image: golang:latest
+          command:
+            - /bin/bash
+            - -c
+            - --
+          args:
+            - go install github.com/adnsio/drone-logs-to-s3@latest; drone-logs-to-s3;
+          env:
+            - name: DRONE_DATABASE_DATASOURCE
+              value: datasource
+            - name: DRONE_S3_BUCKET
+              value: bucket
+            - name: AWS_REGION
+              value: region
+            - name: AWS_ACCESS_KEY_ID
+              value: accesskey
+            - name: AWS_SECRET_ACCESS_KEY
+              value: secretkey
+      restartPolicy: Never
